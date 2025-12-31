@@ -1,5 +1,7 @@
-# Phase 5: Streamlit App - Customer Churn Predictor
-# Customer Churn Prediction Project
+"""
+Customer Churn Prediction System - Streamlit Application
+Interactive dashboard for real-time churn prediction and model evaluation
+"""
 
 import streamlit as st
 import pandas as pd
@@ -7,7 +9,7 @@ import numpy as np
 import joblib
 from PIL import Image
 
-# Page configuration
+# Configure page settings
 st.set_page_config(
     page_title="Customer Churn Predictor",
     page_icon="📊",
@@ -15,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Custom styling
 st.markdown("""
     <style>
     .main-header {
@@ -23,17 +25,6 @@ st.markdown("""
         color: #1f77b4;
         text-align: center;
         margin-bottom: 2rem;
-    }
-    .sub-header {
-        font-size: 1.5rem;
-        color: #ff7f0e;
-        margin-top: 2rem;
-    }
-    .metric-box {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 0.5rem 0;
     }
     .stButton>button {
         width: 100%;
@@ -45,31 +36,29 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# Load model and scaler
+# Load model and scaler with caching
 @st.cache_resource
 def load_model_and_scaler():
-    model = joblib.load('best_model.pkl')
-    scaler = joblib.load('scaler.pkl')
-    return model, scaler
+    """Load trained model and scaler from disk"""
+    try:
+        model = joblib.load('models/best_model.pkl')
+        scaler = joblib.load('models/scaler.pkl')
+        return model, scaler
+    except Exception as e:
+        st.error(f"Error loading model or scaler: {e}")
+        st.stop()
 
 
-try:
-    model, scaler = load_model_and_scaler()
-except Exception as e:
-    st.error(f"Error loading model or scaler: {e}")
-    st.stop()
+model, scaler = load_model_and_scaler()
 
-# Title
+# Main title
 st.markdown('<h1 class="main-header">📊 Customer Churn Prediction System</h1>', unsafe_allow_html=True)
-st.markdown("---")
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Select Page", ["🏠 Home", "🔮 Predict Churn", "📈 Model Performance", "ℹ️ About"])
 
-# ============================================================================
 # HOME PAGE
-# ============================================================================
 if page == "🏠 Home":
     st.markdown("## Welcome to the Customer Churn Prediction System!")
 
@@ -105,17 +94,13 @@ if page == "🏠 Home":
         st.metric("Customers Saved", "194 (Test Set)")
         st.metric("Net Benefit", "$358,500 (Test Set)")
 
-    st.markdown("---")
     st.info("👈 Use the sidebar to navigate to **Predict Churn** to try the model!")
 
-# ============================================================================
 # PREDICT CHURN PAGE
-# ============================================================================
 elif page == "🔮 Predict Churn":
     st.markdown("## 🔮 Predict Customer Churn")
     st.write("Enter customer information below to predict churn probability.")
 
-    # Create two columns for input
     col1, col2 = st.columns(2)
 
     with col1:
@@ -150,9 +135,8 @@ elif page == "🔮 Predict Churn":
         monthly_charges = st.number_input("Monthly Charges ($)", 0.0, 150.0, 70.0, 5.0)
         total_charges = st.number_input("Total Charges ($)", 0.0, 10000.0, float(monthly_charges * tenure), 100.0)
 
-    # Predict button
-    if st.button("🔮 Predict Churn Risk", key="predict_button"):
-        # Create input dataframe
+    if st.button("🔮 Predict Churn Risk"):
+        # Prepare input data
         input_data = {
             'gender': gender,
             'SeniorCitizen': 1 if senior_citizen == "Yes" else 0,
@@ -177,20 +161,20 @@ elif page == "🔮 Predict Churn":
 
         input_df = pd.DataFrame([input_data])
 
-        # Feature engineering (same as training)
+        # Feature engineering
         input_df['CLV'] = input_df['MonthlyCharges'] * input_df['tenure']
         input_df['ChargesRatio'] = input_df['TotalCharges'] / (input_df['MonthlyCharges'] * input_df['tenure'])
         input_df['ChargesRatio'].fillna(0, inplace=True)
         input_df['ChargesRatio'] = input_df['ChargesRatio'].replace([np.inf, -np.inf], 0)
 
-        # Service count
+        # Calculate service count
         service_cols = ['PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity',
                         'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
         input_df['ServiceCount'] = 0
         for col in service_cols:
-            input_df['ServiceCount'] += (input_df[col] == 'Yes').astype(int) | \
-                                        (input_df[col] == 'DSL').astype(int) | \
-                                        (input_df[col] == 'Fiber optic').astype(int)
+            input_df['ServiceCount'] += ((input_df[col] == 'Yes') |
+                                         (input_df[col] == 'DSL') |
+                                         (input_df[col] == 'Fiber optic')).astype(int)
 
         input_df['HasTechSupport'] = (input_df['TechSupport'] == 'Yes').astype(int)
         input_df['HasSecurityServices'] = ((input_df['OnlineSecurity'] == 'Yes') |
@@ -198,7 +182,7 @@ elif page == "🔮 Predict Churn":
                                            (input_df['DeviceProtection'] == 'Yes')).astype(int)
 
 
-        # Tenure group
+        # Tenure and charges categorization
         def tenure_group(t):
             if t <= 6:
                 return '0-6 months'
@@ -212,10 +196,6 @@ elif page == "🔮 Predict Churn":
                 return '4+ years'
 
 
-        input_df['TenureGroup'] = input_df['tenure'].apply(tenure_group)
-
-
-        # Charges category
         def charges_category(c):
             if c < 30:
                 return 'Low'
@@ -225,6 +205,7 @@ elif page == "🔮 Predict Churn":
                 return 'High'
 
 
+        input_df['TenureGroup'] = input_df['tenure'].apply(tenure_group)
         input_df['ChargesCategory'] = input_df['MonthlyCharges'].apply(charges_category)
 
         # Encode categorical variables
@@ -232,51 +213,52 @@ elif page == "🔮 Predict Churn":
         for col in binary_cols:
             input_df[col] = input_df[col].map({'Yes': 1, 'No': 0})
 
-        # One-hot encoding
         categorical_cols = ['gender', 'MultipleLines', 'InternetService', 'OnlineSecurity',
                             'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV',
                             'StreamingMovies', 'Contract', 'PaymentMethod', 'TenureGroup', 'ChargesCategory']
         input_encoded = pd.get_dummies(input_df, columns=categorical_cols, drop_first=True)
 
-        # Load feature names from training
-        with open('feature_names.txt', 'r') as f:
+        # Align with training features
+        with open('models/feature_names.txt', 'r') as f:
             feature_names = [line.strip() for line in f]
 
-        # Align columns with training data
         for col in feature_names:
             if col not in input_encoded.columns:
                 input_encoded[col] = 0
         input_encoded = input_encoded[feature_names]
 
         # Scale numeric features
-        numeric_cols_to_scale = ['tenure', 'MonthlyCharges', 'TotalCharges', 'CLV', 'ChargesRatio', 'ServiceCount']
-        cols_to_scale = [col for col in numeric_cols_to_scale if col in input_encoded.columns]
+        numeric_cols = ['tenure', 'MonthlyCharges', 'TotalCharges', 'CLV', 'ChargesRatio', 'ServiceCount']
+        cols_to_scale = [col for col in numeric_cols if col in input_encoded.columns]
         input_encoded[cols_to_scale] = scaler.transform(input_encoded[cols_to_scale])
 
         # Make prediction
         prediction = model.predict(input_encoded)[0]
         prediction_proba = model.predict_proba(input_encoded)[0]
+        churn_prob = prediction_proba[1] * 100
 
         # Display results
-        st.markdown("---")
         st.markdown("## 📊 Prediction Results")
 
         col1, col2, col3 = st.columns(3)
-
-        churn_prob = prediction_proba[1] * 100
 
         with col1:
             st.metric("Churn Probability", f"{churn_prob:.1f}%")
 
         with col2:
-            risk_level = "🔴 HIGH RISK" if churn_prob > 70 else "🟡 MEDIUM RISK" if churn_prob > 40 else "🟢 LOW RISK"
+            if churn_prob > 70:
+                risk_level = "🔴 HIGH RISK"
+            elif churn_prob > 40:
+                risk_level = "🟡 MEDIUM RISK"
+            else:
+                risk_level = "🟢 LOW RISK"
             st.metric("Risk Level", risk_level)
 
         with col3:
             prediction_text = "⚠️ LIKELY TO CHURN" if prediction == 1 else "✅ LIKELY TO STAY"
             st.metric("Prediction", prediction_text)
 
-        # Recommendations
+        # Recommendations based on risk level
         st.markdown("### 💡 Recommended Actions")
         if churn_prob > 70:
             st.error("""
@@ -303,7 +285,7 @@ elif page == "🔮 Predict Churn":
             - Monitor satisfaction regularly
             """)
 
-        # Risk factors
+        # Identify risk factors
         st.markdown("### ⚠️ Key Risk Factors")
         risk_factors = []
         if contract == "Month-to-month":
@@ -323,19 +305,16 @@ elif page == "🔮 Predict Churn":
         else:
             st.write("✅ No major risk factors identified")
 
-# ============================================================================
 # MODEL PERFORMANCE PAGE
-# ============================================================================
 elif page == "📈 Model Performance":
     st.markdown("## 📈 Model Performance Analysis")
 
-    # Load and display images
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("### Model Comparison")
         try:
-            img1 = Image.open('model_comparison.png')
+            img1 = Image.open('visualizations/model_comparison.png')
             st.image(img1, use_container_width=True)
         except:
             st.warning("Model comparison image not found")
@@ -343,21 +322,17 @@ elif page == "📈 Model Performance":
     with col2:
         st.markdown("### Best Model Evaluation")
         try:
-            img2 = Image.open('best_model_evaluation.png')
+            img2 = Image.open('visualizations/best_model_evaluation.png')
             st.image(img2, use_container_width=True)
         except:
             st.warning("Best model evaluation image not found")
 
-    st.markdown("---")
-
-    # Performance metrics
     st.markdown("### 🎯 Performance Metrics")
-
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Accuracy", "80.1%", help="Overall correctness of predictions")
-    col2.metric("Precision", "65.8%", help="When we predict churn, we're right 66% of the time")
-    col3.metric("Recall", "51.9%", help="We catch 52% of actual churners")
-    col4.metric("ROC-AUC", "0.845", help="Excellent discrimination ability")
+    col1.metric("Accuracy", "80.1%")
+    col2.metric("Precision", "65.8%")
+    col3.metric("Recall", "51.9%")
+    col4.metric("ROC-AUC", "0.845")
 
     st.markdown("### 💰 Business Impact")
     col1, col2, col3 = st.columns(3)
@@ -365,27 +340,24 @@ elif page == "📈 Model Performance":
     col2.metric("Projected Annual Savings", "$1,791,991")
     col3.metric("Customers Saved", "194 (of 374 churners)")
 
-    st.markdown("---")
-
-    # Load model comparison data
+    # Load and display model comparison table
     try:
-        comparison_df = pd.read_csv('model_comparison.csv')
+        comparison_df = pd.read_csv('data/model_comparison.csv')
         st.markdown("### 📊 Detailed Model Comparison")
-        st.dataframe(comparison_df.style.highlight_max(axis=0, subset=['Accuracy', 'Precision', 'Recall', 'F1-Score',
-                                                                       'ROC-AUC']))
+        st.dataframe(comparison_df.style.highlight_max(axis=0,
+                                                       subset=['Accuracy', 'Precision', 'Recall', 'F1-Score',
+                                                               'ROC-AUC']))
     except:
         st.warning("Model comparison data not found")
 
-# ============================================================================
 # ABOUT PAGE
-# ============================================================================
 elif page == "ℹ️ About":
     st.markdown("## ℹ️ About This Project")
 
     st.markdown("### 📖 Project Description")
     st.write("""
-    This Customer Churn Prediction System was built as an end-to-end machine learning project
-    to demonstrate the complete ML workflow from data analysis to deployment.
+    This Customer Churn Prediction System demonstrates an end-to-end machine learning workflow 
+    from data analysis to deployment, showcasing practical ML engineering skills.
     """)
 
     st.markdown("### 🛠️ Technical Stack")
@@ -393,20 +365,11 @@ elif page == "ℹ️ About":
 
     with col1:
         st.markdown("**Data Analysis & ML:**")
-        st.write("""
-        - Python 3.x
-        - Pandas & NumPy
-        - Scikit-learn
-        - Matplotlib & Seaborn
-        """)
+        st.write("- Python 3.8+\n- Pandas & NumPy\n- Scikit-learn\n- Matplotlib & Seaborn")
 
     with col2:
         st.markdown("**Deployment:**")
-        st.write("""
-        - Streamlit
-        - Joblib (model serialization)
-        - Git & GitHub
-        """)
+        st.write("- Streamlit\n- Joblib\n- Git & GitHub")
 
     st.markdown("### 📊 Dataset")
     st.write("""
@@ -436,17 +399,16 @@ elif page == "ℹ️ About":
 
     st.markdown("### 📧 Contact")
     st.write("""
-    **Created by:** [Your Name]
+    **Nikhil Vanama**
 
-    **GitHub:** [Your GitHub Profile]
+    **GitHub:** [NikhilGG123](https://github.com/NikhilGG123)
 
-    **LinkedIn:** [Your LinkedIn Profile]
+    **Email:** vanamanikhil0@gmail.com
     """)
 
 # Footer
-st.markdown("---")
 st.markdown("""
-    <div style='text-align: center; color: gray;'>
+    <div style='text-align: center; color: gray; margin-top: 3rem;'>
         <p>Customer Churn Prediction System | Built with Streamlit and Scikit-learn</p>
     </div>
 """, unsafe_allow_html=True)

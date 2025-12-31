@@ -1,6 +1,6 @@
 # Telecom Customer Churn Prediction System
 
-![Streamlit Dashboard](streamlit_home.png)
+![Streamlit Dashboard](visualizations/streamlit_home.png)
 
 ## Executive Summary
 
@@ -23,7 +23,7 @@ Customer acquisition costs exceed retention costs by 5-7x in telecom. This syste
 
 ## Key Insights
 
-![Churn Analysis](churn_analysis_by_features.png)
+![Churn Analysis](visualizations/churn_analysis_by_features.png)
 
 **High-Risk Segments**:
 - Month-to-month contracts: **42% churn** vs 14% annual (3x risk)
@@ -59,7 +59,7 @@ Expanded from 21 → 41 features through one-hot encoding and strategic derivati
 
 **Selection Rationale**: Logistic Regression chosen for best ROC-AUC, interpretability, and computational efficiency. Feature engineering > algorithm complexity for this problem.
 
-![Model Evaluation](best_model_evaluation.png)
+![Model Evaluation](visualizations/best_model_evaluation.png)
 
 **Confusion Matrix** (Test Set): TN=934, FP=101, FN=180, TP=194  
 Balance between catching churners (recall) and minimizing false alarms (precision) optimized for business economics.
@@ -82,15 +82,15 @@ Balance between catching churners (recall) and minimizing false alarms (precisio
 
 ### Real-Time Prediction Interface
 
-![Prediction Input](streamlit_predict_input.png)
+![Prediction Input](visualizations/streamlit_predict_input.png)
 *Customer data input form with comprehensive service and billing options*
 
-![Prediction Output](streamlit_predict_output.png)
+![Prediction Output](visualizations/streamlit_predict_output.png)
 *Instant churn probability with risk stratification and personalized recommendations*
 
 ### Model Performance Dashboard
 
-![Performance Analytics](streamlit_performance.png)
+![Performance Analytics](visualizations/streamlit_performance.png)
 *Comprehensive model evaluation with confusion matrix, ROC curves, and comparison charts*
 
 **Production Features**: 
